@@ -72,11 +72,13 @@ exposedMigration {
     // Directory where the generated migration scripts will be stored
     migrationsDir.set(layout.projectDirectory.dir("src/main/resources/db/migration"))
 
-    // Database connection details (required for generating migrations)
+    // Database connection details (optional if using TestContainers)
     databaseUrl.set("jdbc:postgresql://localhost:5432/mydb")
     databaseUser.set("postgres")
     databasePassword.set("password")
 
+    // Optional: TestContainers configuration
+    testContainersImageName.set("postgres:latest") // Docker image for TestContainers
     // Optional: Prefix for migration file names (default: "V")
     migrationFilePrefix.set("V")
 
@@ -111,6 +113,51 @@ The plugin generates migration scripts that follow Flyway's naming convention:
 - Migration file naming pattern: `<prefix><version><separator><description>.<extension>`
   - Default: `V1.0__description.sql`
 
+### Using TestContainers
+
+Instead of configuring a direct database connection, you can use TestContainers to spin up a temporary database container during migration generation:
+
+```kotlin
+exposedMigration {
+    exposedTablesPackage.set("com.example.db.tables")
+    migrationsDir.set(layout.projectDirectory.dir("src/main/resources/db/migration"))
+
+    // Enable TestContainers
+    useTestContainers.set(true)
+
+    // Optional: Specify a custom Docker image (default: postgres:latest)
+    testContainersImageName.set("postgres:13-alpine")
+}
+```
+
+When TestContainers is enabled, the database connection properties (databaseUrl, databaseUser, databasePassword) become optional. The plugin will automatically start a container using the specified image, connect to it, and shut it down after the migrations are generated.
+
+### Using Flyway for Existing Migrations
+
+You can enable Flyway to run existing migration scripts before generating new ones:
+
+```kotlin
+exposedMigration {
+    exposedTablesPackage.set("com.example.db.tables")
+    migrationsDir.set(layout.projectDirectory.dir("src/main/resources/db/migration"))
+
+    // Database connection details or TestContainers
+    databaseUrl.set("jdbc:postgresql://localhost:5432/mydb")
+    databaseUser.set("postgres")
+    databasePassword.set("password")
+
+    // Enable Flyway migrations
+    useFlywayMigrations.set(true)
+}
+```
+
+When Flyway is enabled, the plugin will:
+1. Connect to the database (either direct connection or TestContainers)
+2. Run all existing migration scripts in the migrations directory
+3. Generate new migration scripts based on the current state of the database and your Exposed table definitions
+
+This ensures that new migrations are generated based on the latest database schema, including any changes made by previous migrations.
+
 ## File Naming
 
 The plugin automatically generates meaningful file names for migration scripts based on the SQL statements they contain. The `statementToFileName` function analyzes each SQL statement and extracts relevant information:
@@ -132,15 +179,25 @@ This ensures that migration files have descriptive names that reflect their purp
    - Ensure your Exposed table classes are in the package specified by `exposedTablesPackage`
    - Verify that your table classes are objects (singletons) that extend `Table`
    - Check that the database connection details are correct
+   - If using TestContainers, ensure Docker is running on your machine
 
 2. **Database connection errors**
    - Verify that the database server is running and accessible
    - Check that the database URL, username, and password are correct
    - Ensure that the database user has the necessary permissions
+   - If using TestContainers, check that Docker is running and has sufficient resources
 
-3. **Flyway migration errors**
+3. **TestContainers issues**
+   - If you see "Could not find a valid Docker environment", ensure Docker is installed and running
+   - For "Connection refused" errors, check that Docker has network connectivity
+   - If the container fails to start, try specifying a different image or version
+   - Ensure your machine has enough memory and disk space for the container
+
+4. **Flyway migration errors**
    - If you see errors like "Migration checksum mismatch", it means the migration script has changed after it was applied. Never modify existing migration scripts; instead, create new ones.
    - For "Migration version X already exists" errors, ensure you're not generating duplicate version numbers
+   - If Flyway fails to run migrations, check that the migration scripts are valid SQL for your database type
+   - When using both TestContainers and Flyway, remember that the database is ephemeral and will be recreated each time
 
 ## Contributing
 

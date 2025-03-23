@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,7 +48,7 @@ class ExposedMigrationPluginTest {
     }
 
     @Test
-    fun `test task configuration`() {
+    fun `test task configuration with database properties`() {
         // Get the extension and task
         val extension = project.extensions.getByType(ExposedMigrationExtension::class.java)
         val task = project.tasks.getByName("generateMigrations") as GenerateMigrationsTask
@@ -82,5 +83,34 @@ class ExposedMigrationPluginTest {
         assertEquals("jdbc:h2:mem:test", task.databaseUrl.get())
         assertEquals("sa", task.databaseUser.get())
         assertEquals("", task.databasePassword.get())
+
+        // Verify that TestContainers and Flyway are disabled by default
+        assertTrue(task.testContainersImageName.isPresent)
+        assertEquals("postgres:latest", task.testContainersImageName.get())
+    }
+
+    @Test
+    fun `test task configuration with TestContainers`() {
+        // Get the extension and task
+        val extension = project.extensions.getByType(ExposedMigrationExtension::class.java)
+        val task = project.tasks.getByName("generateMigrations") as GenerateMigrationsTask
+
+        // Set custom values in the extension
+        extension.migrationsDir.set(project.layout.projectDirectory.dir("custom/migrations"))
+        extension.exposedTablesPackage.set("com.example.tables")
+
+        // Enable TestContainers with custom image
+        extension.testContainersImageName.set("postgres:13-alpine")
+
+        // Force task configuration
+        project.tasks.configureEach {}
+
+        assertTrue(task.testContainersImageName.isPresent)
+        assertEquals("postgres:13-alpine", task.testContainersImageName.get())
+
+        // Database properties should be optional when TestContainers is used
+        assertFalse(task.databaseUrl.isPresent)
+        assertFalse(task.databaseUser.isPresent)
+        assertFalse(task.databasePassword.isPresent)
     }
 }

@@ -32,8 +32,22 @@ dependencies {
     implementation("org.flywaydb:flyway-gradle-plugin:10.10.0")
     implementation("org.postgresql:postgresql:42.6.0")
 
-    // Database drivers for testing
-    testImplementation("com.h2database:h2:2.2.224")
+    // TestContainers
+    implementation("org.testcontainers:testcontainers:1.19.7")
+    implementation("org.testcontainers:postgresql:1.19.7")
+    implementation("org.testcontainers:mysql:1.19.7")
+    implementation("org.testcontainers:mariadb:1.19.7")
+    implementation("org.testcontainers:mssqlserver:1.19.7")
+    implementation("org.testcontainers:oracle-xe:1.19.7")
+    implementation("org.testcontainers:jdbc:1.19.7")
+
+    // Database drivers
+    implementation("com.h2database:h2:2.2.224")
+    implementation("mysql:mysql-connector-java:8.0.33")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.3")
+    implementation("com.microsoft.sqlserver:mssql-jdbc:12.6.0.jre11")
+    implementation("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09")
+    implementation("org.xerial:sqlite-jdbc:3.45.2.0")
 
     // Testing
     testImplementation(kotlin("test"))
