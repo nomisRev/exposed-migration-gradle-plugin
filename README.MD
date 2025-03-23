@@ -6,7 +6,7 @@ Databases in production always require dealing with schema evolution. This can b
 
 Typically, tools like Flyway or Liquibase are used to evolve your database schema easily and reliably. As indicated by `createMissingTablesAndColumns` from the exposed-migration module, the concerns typically are that "Execution of this function might lead to unpredictable state in the database if a failure occurs at any point". Flyway makes sure that you always end up in a predictable state, even if a failure occurs.
 
-This Gradle plugin integrates JetBrains Exposed (version 0.60.0) with Flyway to automatically generate SQL migration scripts from your Exposed table definitions. This eliminates the need to manually write SQL migration scripts, reducing errors and ensuring consistency between your Exposed schema and database schema.
+This Gradle plugin integrates JetBrains Exposed (version 0.60.0) to automatically generate SQL migration scripts from your Exposed table definitions. This eliminates the need to manually write SQL migration scripts, reducing errors and ensuring consistency between your Exposed schema and database schema.
 
 ## How It Works
 
@@ -56,7 +56,7 @@ Add the plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("org.jetbrains.exposed-migration") version "1.0-SNAPSHOT"
+    id("org.jetbrains.exposed.migration") version "0.1.0-SNAPSHOT"
 }
 ```
 
@@ -66,20 +66,25 @@ Configure the plugin in your `build.gradle.kts`:
 
 ```kotlin
 exposedMigration {
-    // Directory containing your Exposed table definitions
-    tablesPackage = "com.example.db.tables"
+    // Package name where Exposed table definitions are located
+    exposedTablesPackage.set("com.example.db.tables")
 
-    // Output directory for generated migration scripts (relative to project root)
-    outputDirectory = "src/main/resources/db/migration"
+    // Directory where the generated migration scripts will be stored
+    migrationsDir.set(layout.projectDirectory.dir("src/main/resources/db/migration"))
 
-    // Optional: Prefix for migration version numbers (default: "V")
-    versionPrefix = "V"
+    // Database connection details (required for generating migrations)
+    databaseUrl.set("jdbc:postgresql://localhost:5432/mydb")
+    databaseUser.set("postgres")
+    databasePassword.set("password")
 
-    // Optional: Separator between version and description (default: "__")
-    separator = "__"
+    // Optional: Prefix for migration file names (default: "V")
+    migrationFilePrefix.set("V")
 
-    // Optional: Starting version number (default: "1_0")
-    baselineVersion = "1_0"
+    // Optional: Separator for migration file names (default: "__")
+    migrationFileSeparator.set("__")
+
+    // Optional: File extension for migration files (default: ".sql")
+    migrationFileExtension.set(".sql")
 }
 ```
 
@@ -89,60 +94,53 @@ The plugin adds the following tasks to your Gradle build:
 
 ```bash
 # Generate migration files based on your Exposed table definitions
-./gradlew generateMigrationFiles
-
-# Run Flyway migrations to update your database schema
-./gradlew flywayMigrate
+./gradlew generateMigrations
 ```
 
 You can also integrate these tasks into your build process:
 
 ```kotlin
 tasks.build {
-    dependsOn("generateMigrationFiles")
+    dependsOn("generateMigrations")
 }
 ```
 
-## Flyway Integration
+The plugin generates migration scripts that follow Flyway's naming convention:
 
-The plugin automatically configures Flyway with sensible defaults:
+- Migration scripts location: Configured by `migrationsDir` in the plugin configuration
+- Migration file naming pattern: `<prefix><version><separator><description>.<extension>`
+  - Default: `V1.0__description.sql`
 
-- Migration scripts location: `src/main/resources/db/migration`
-- Migration file naming pattern: `V<version>__<description>.sql`
-- Database connection details are read from your application configuration
+## File Naming
 
-You can customize Flyway configuration in your `build.gradle.kts`:
+The plugin automatically generates meaningful file names for migration scripts based on the SQL statements they contain. The `statementToFileName` function analyzes each SQL statement and extracts relevant information:
 
-```kotlin
-flyway {
-    url = "jdbc:postgresql://localhost:5432/mydb"
-    user = "postgres"
-    password = "password"
-    locations = arrayOf("filesystem:src/main/resources/db/migration")
-    baselineOnMigrate = true
-}
-```
+- For `CREATE TABLE` statements: Uses the table name (e.g., `create_users_table`)
+- For `ALTER TABLE` statements: Uses the table name and operation (e.g., `alter_users_add_email`)
+- For `CREATE INDEX` statements: Uses the index name (e.g., `create_users_email_idx`)
+- For `CREATE SEQUENCE` statements: Uses the sequence name (e.g., `create_user_id_seq`)
+- For `DROP TABLE` statements: Uses the table name (e.g., `drop_users_table`)
+- For other statements: Attempts to extract any table name or generates a generic name
 
-## Testing
+This ensures that migration files have descriptive names that reflect their purpose, making it easier to understand the evolution of your database schema.
 
-The plugin includes comprehensive testing to ensure reliability:
+## Troubleshooting
 
-1. **Unit Tests**: Test individual components of the migration generation system
-2. **Integration Tests**: Test the interaction between Exposed schema definitions and generated SQL
-3. **Functional Tests**: Test the Gradle plugin tasks and Flyway integration with various database types
+### Common Issues
 
-Run the tests with:
+1. **No migrations generated**
+   - Ensure your Exposed table classes are in the package specified by `exposedTablesPackage`
+   - Verify that your table classes are objects (singletons) that extend `Table`
+   - Check that the database connection details are correct
 
-```bash
-./gradlew test
-```
+2. **Database connection errors**
+   - Verify that the database server is running and accessible
+   - Check that the database URL, username, and password are correct
+   - Ensure that the database user has the necessary permissions
 
-## Expected Challenges
-
-- Users might opt-in to the system on existing infrastructure, and we need to take into account their existing schema.
-- Ideally, readable and meaningful names need to be generated for the files, based on changes in the table(s).
-- Support for different tools like Flyway and Liquibase (and maybe more) might require different files to be generated.
-- More fine-grained Ktor integration in regards to migrations might be desired (Flyway plugin?).
+3. **Flyway migration errors**
+   - If you see errors like "Migration checksum mismatch", it means the migration script has changed after it was applied. Never modify existing migration scripts; instead, create new ones.
+   - For "Migration version X already exists" errors, ensure you're not generating duplicate version numbers
 
 ## Contributing
 
