@@ -12,16 +12,31 @@ repositories {
 }
 
 dependencies {
+    // Kotlin
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
+
+    // Gradle API
     implementation(gradleApi())
 
+    // Exposed
     implementation("org.jetbrains.exposed:exposed-core:0.60.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.60.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.60.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.60.0")
     implementation("org.jetbrains.exposed:exposed-migration:0.60.0")
 
 
+    // Flyway
+    implementation("org.flywaydb:flyway-core:10.10.0")
+    implementation("org.flywaydb:flyway-gradle-plugin:10.10.0")
+    implementation("org.postgresql:postgresql:42.6.0")
+
+    // Database drivers for testing
+    testImplementation("com.h2database:h2:2.2.224")
+
+    // Testing
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
 
 gradlePlugin {

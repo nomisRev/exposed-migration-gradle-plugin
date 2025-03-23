@@ -23,6 +23,7 @@ import org.jetbrains.org.jetbrains.exposed.migration.plugin.statementToFileName
 import java.io.File
 import java.io.File.separator
 import java.net.URLClassLoader
+import java.util.regex.Pattern
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
@@ -67,14 +68,13 @@ abstract class GenerateMigrationsTask : DefaultTask() {
     @OptIn(ExperimentalDatabaseMigrationApi::class)
     @TaskAction
     fun generateMigrations() {
-        val prefix = migrationFilePrefix.get()
-        val separator = migrationFileSeparator.get()
         val extension = migrationFileExtension.get()
         val migrationsDirectory = migrationsDir.get().asFile
         if (!migrationsDirectory.exists()) migrationsDirectory.mkdirs()
-
+        val versionGen = findHighestVersion(migrationsDirectory)
         val generated = withClassloader { classloader ->
             withDatabase { database ->
+                var ignored = 0
                 classloader.getClassesInPackage(exposedTablesPackage.get())
                     .mapNotNull { it.tableOrNull() }
                     .mapIndexedNotNull { index, table ->
@@ -84,11 +84,15 @@ abstract class GenerateMigrationsTask : DefaultTask() {
                                 MigrationUtils.statementsRequiredForDatabaseMigration(table, withLogs = false)
                             if (statements.isNotEmpty()) {
                                 val name = statements.first().statementToFileName()
-                                val fileName = "$prefix${index + 1}${separator}$name$extension"
+                                val version = versionGen(index - ignored)
+                                val fileName = "$version$name$extension"
                                 val migrationFile = File(migrationsDirectory, fileName)
                                 migrationFile.writeText(statements.joinToString(";\n"))
                                 fileName
-                            } else null
+                            } else {
+                                ignored++
+                                null
+                            }
                         }
                     }.toList()
             }
@@ -97,6 +101,45 @@ abstract class GenerateMigrationsTask : DefaultTask() {
         logger.lifecycle("# Exposed Migrations Generated ${generated.size} migrations:")
         generated.forEach { logger.lifecycle("  * $it") }
         logger.lifecycle("")
+    }
+
+    private val versionPattern by lazy { Pattern.compile("^${migrationFilePrefix.get()}(\\d+)${migrationFileSeparator.get()}.*$") }
+    private val versionXYPattern by lazy { Pattern.compile("^${migrationFilePrefix.get()}(\\d+)_(\\d+)${migrationFileSeparator.get()}.*$") }
+
+    fun findHighestVersion(migrationsDirectory: File): (Int) -> String {
+        var highestMajor = 0
+        var hasXYFormat = false
+
+        migrationsDirectory.listFiles().forEach { file ->
+            val fileName = file.name
+
+            // Check for VX_Y__ format first
+            val matcherXY = versionXYPattern.matcher(fileName)
+            if (matcherXY.matches()) {
+                hasXYFormat = true
+                val major = matcherXY.group(1).toInt()
+
+                if (major > highestMajor || (major == highestMajor)) {
+                    highestMajor = major
+                }
+            } else {
+                // Check for VX__ format
+                val matcher = versionPattern.matcher(fileName)
+                if (matcher.matches()) {
+                    val version = matcher.group(1).toInt()
+                    if (!hasXYFormat && version > highestMajor) {
+                        highestMajor = version
+                    }
+                }
+            }
+        }
+        highestMajor++
+
+        return if (hasXYFormat) {
+            { index: Int -> "${migrationFilePrefix.get()}${highestMajor}_${index}${migrationFileSeparator.get()}" }
+        } else {
+            { index: Int -> "${migrationFilePrefix.get()}${highestMajor}${migrationFileSeparator.get()}" }
+        }
     }
 
     private inline fun <A> withDatabase(block: (Database) -> A): A {
@@ -150,4 +193,5 @@ abstract class GenerateMigrationsTask : DefaultTask() {
             logger.lifecycle(context.expandArgs(TransactionManager.current()))
         }
     }
+
 }
