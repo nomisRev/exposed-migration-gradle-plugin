@@ -1,7 +1,6 @@
 package org.jetbrains.exposed.migration.plugin
 
 import org.flywaydb.core.Flyway
-import org.flywaydb.core.internal.jdbc.DriverDataSource
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -16,6 +15,7 @@ import org.jetbrains.exposed.sql.ExperimentalDatabaseMigrationApi
 import org.jetbrains.exposed.sql.SqlLogger
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.statements.StatementContext
 import org.jetbrains.exposed.sql.statements.expandArgs
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -95,9 +95,12 @@ abstract class GenerateMigrationsTask : DefaultTask() {
                     .mapNotNull { it.tableOrNull() }
                     .mapIndexedNotNull { index, table ->
                         transaction(database) {
-//                            addLogger(GradleLogger())
+                            addLogger(GradleLogger())
                             val statements =
-                                MigrationUtils.statementsRequiredForDatabaseMigration(table, withLogs = false)
+                                MigrationUtils.statementsRequiredForDatabaseMigration(
+                                    table,
+                                    withLogs = logger.isDebugEnabled
+                                )
                             if (statements.isNotEmpty()) {
                                 val name = statements.first().statementToFileName()
                                 val version = versionGen(index - ignored)
@@ -163,11 +166,13 @@ abstract class GenerateMigrationsTask : DefaultTask() {
             container(testContainersImageName.get()).use { container ->
                 withDatabase(container.jdbcUrl, container.username, container.password) { database ->
                     val migrationsDirectory = migrationsDir.get().asFile
-                    Flyway.configure()
-                        .dataSource(container.jdbcUrl, container.username, container.password)
-                        .locations("filesystem:${migrationsDirectory.absolutePath}")
-                        .load()
-                        .migrate()
+                    if (migrationsDirectory.walk().any()) {
+                        Flyway.configure()
+                            .dataSource(container.jdbcUrl, container.username, container.password)
+                            .locations("filesystem:${migrationsDirectory.absolutePath}")
+                            .load()
+                            .migrate()
+                    }
                     block(database)
                 }
             }
@@ -241,8 +246,9 @@ abstract class GenerateMigrationsTask : DefaultTask() {
 
     inner class GradleLogger : SqlLogger {
         override fun log(context: StatementContext, transaction: Transaction) {
-            logger.lifecycle(context.expandArgs(TransactionManager.current()))
+            if (logger.isDebugEnabled) {
+                logger.debug(context.expandArgs(TransactionManager.current()))
+            }
         }
     }
-
 }

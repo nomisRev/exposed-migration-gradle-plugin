@@ -1,0 +1,42 @@
+[versions]
+kotlin = "2.1.20"
+exposed = "0.60.0"
+flyway = "11.4.1"
+testcontainers = "1.20.6"
+h2 = "2.3.232"
+postgresql = "42.7.5"
+mysql = "8.0.33"
+mariadb = "3.5.2"
+mssql = "12.10.0.jre11"
+oracle = "23.7.0.25.01"
+
+[libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
+
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposed-migration = { module = "org.jetbrains.exposed:exposed-migration", version.ref = "exposed" }
+
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+flyway-mysql = { module = "org.flywaydb:flyway-mysql", version.ref = "flyway" }
+flyway-sqlserver = { module = "org.flywaydb:flyway-sqlserver", version.ref = "flyway" }
+flyway-oracle = { module = "org.flywaydb:flyway-database-oracle", version.ref = "flyway" }
+
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-mysql = { module = "org.testcontainers:mysql", version.ref = "testcontainers" }
+testcontainers-mariadb = { module = "org.testcontainers:mariadb", version.ref = "testcontainers" }
+testcontainers-mssqlserver = { module = "org.testcontainers:mssqlserver", version.ref = "testcontainers" }
+testcontainers-oracle = { module = "org.testcontainers:oracle-xe", version.ref = "testcontainers" }
+
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+mysql = { module = "mysql:mysql-connector-java", version.ref = "mysql" }
+mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
+mssql = { module = "com.microsoft.sqlserver:mssql-jdbc", version.ref = "mssql" }
+oracle = { module = "com.oracle.database.jdbc:ojdbc11", version.ref = "oracle" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+java-gradle-plugin = { id = "java-gradle-plugin" }
+maven-publish = { id = "maven-publish" }

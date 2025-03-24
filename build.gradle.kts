@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
-    id("java-gradle-plugin")
-    id("maven-publish")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.java.gradle.plugin)
+    alias(libs.plugins.maven.publish)
 }
 
 group = "org.jetbrains.exposed"
@@ -12,37 +12,35 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
-    implementation(kotlin("reflect"))
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.reflect)
 
     implementation(gradleApi())
 
-    implementation("org.jetbrains.exposed:exposed-jdbc:0.60.0")
-    implementation("org.jetbrains.exposed:exposed-migration:0.60.0")
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.migration)
 
-    implementation("org.flywaydb:flyway-database-postgresql:11.4.1")
-    implementation("org.flywaydb:flyway-mysql:11.4.1")
-    implementation("org.flywaydb:flyway-sqlserver:11.4.1")
-    implementation("org.flywaydb:flyway-database-oracle:11.4.1")
+    implementation(libs.flyway.postgresql)
+    implementation(libs.flyway.mysql)
+    implementation(libs.flyway.sqlserver)
+    implementation(libs.flyway.oracle)
 
-    val testContainersVersion = "1.20.6"
-
-    implementation("org.testcontainers:postgresql:$testContainersVersion")
-    implementation("org.testcontainers:mysql:$testContainersVersion")
-    implementation("org.testcontainers:mariadb:$testContainersVersion")
-    implementation("org.testcontainers:mssqlserver:$testContainersVersion")
-    implementation("org.testcontainers:oracle-xe:$testContainersVersion")
+    implementation(libs.testcontainers.postgresql)
+    implementation(libs.testcontainers.mysql)
+    implementation(libs.testcontainers.mariadb)
+    implementation(libs.testcontainers.mssqlserver)
+    implementation(libs.testcontainers.oracle)
 
     // Database drivers
-    implementation("com.h2database:h2:2.3.232")
-    implementation("org.postgresql:postgresql:42.7.5")
-    implementation("mysql:mysql-connector-java:8.0.33")
-    implementation("org.mariadb.jdbc:mariadb-java-client:3.5.2")
-    implementation("com.microsoft.sqlserver:mssql-jdbc:12.10.0.jre11")
-    implementation("com.oracle.database.jdbc:ojdbc11:23.7.0.25.01")
+    implementation(libs.h2)
+    implementation(libs.postgresql)
+    implementation(libs.mysql)
+    implementation(libs.mariadb)
+    implementation(libs.mssql)
+    implementation(libs.oracle)
 
     // Testing
-    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlin.test)
 }
 
 gradlePlugin {
