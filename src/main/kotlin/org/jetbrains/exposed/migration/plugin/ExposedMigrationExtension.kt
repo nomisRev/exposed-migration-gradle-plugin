@@ -51,12 +51,6 @@ open class ExposedMigrationExtension @Inject constructor(objects: ObjectFactory)
     val databaseUrl: Property<String> = objects.property(String::class.java)
 
     /**
-     * JDBC driver class name for the database connection.
-     * This is optional if useTestContainers is true.
-     */
-    val databaseDriver: Property<String> = objects.property(String::class.java)
-
-    /**
      * Username for the database connection.
      * This is optional if useTestContainers is true.
      */
@@ -70,9 +64,8 @@ open class ExposedMigrationExtension @Inject constructor(objects: ObjectFactory)
 
     /**
      * Docker image name for TestContainers.
-     * Default: postgres:latest
      */
-    val testContainersImageName: Property<String> = objects.property(String::class.java).convention("postgres:latest")
+    val testContainersImageName: Property<String> = objects.property(String::class.java)
 
     /**
      * Classpath that is scanned for Exposed Tables

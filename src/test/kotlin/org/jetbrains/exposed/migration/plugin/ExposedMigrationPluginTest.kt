@@ -18,10 +18,8 @@ class ExposedMigrationPluginTest {
 
     @BeforeEach
     fun setup() {
-        // Create a test project
         project = ProjectBuilder.builder().build()
-
-        // Apply the plugin
+        // Skip applying Kotlin JVM plugin as it's not needed for these tests
         project.pluginManager.apply("org.jetbrains.exposed.migration")
     }
 
@@ -62,7 +60,6 @@ class ExposedMigrationPluginTest {
 
         // Set database connection properties
         extension.databaseUrl.set("jdbc:h2:mem:test")
-        extension.databaseDriver.set("org.h2.Driver")
         extension.databaseUser.set("sa")
         extension.databasePassword.set("")
 
@@ -85,8 +82,7 @@ class ExposedMigrationPluginTest {
         assertEquals("", task.databasePassword.get())
 
         // Verify that TestContainers and Flyway are disabled by default
-        assertTrue(task.testContainersImageName.isPresent)
-        assertEquals("postgres:latest", task.testContainersImageName.get())
+        assertFalse(task.testContainersImageName.isPresent)
     }
 
     @Test

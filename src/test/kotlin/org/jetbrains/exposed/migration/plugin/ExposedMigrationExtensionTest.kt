@@ -17,10 +17,7 @@ class ExposedMigrationExtensionTest {
 
     @BeforeEach
     fun setup() {
-        // Create a test project
         project = ProjectBuilder.builder().build()
-
-        // Create the extension
         extension = project.extensions.create("exposedMigration", ExposedMigrationExtension::class.java)
     }
 
@@ -43,7 +40,6 @@ class ExposedMigrationExtensionTest {
 
         // Set database connection properties
         extension.databaseUrl.set("jdbc:h2:mem:test")
-        extension.databaseDriver.set("org.h2.Driver")
         extension.databaseUser.set("sa")
         extension.databasePassword.set("")
 
@@ -57,7 +53,6 @@ class ExposedMigrationExtensionTest {
 
         // Verify database connection properties
         assertEquals("jdbc:h2:mem:test", extension.databaseUrl.get())
-        assertEquals("org.h2.Driver", extension.databaseDriver.get())
         assertEquals("sa", extension.databaseUser.get())
         assertEquals("", extension.databasePassword.get())
     }
