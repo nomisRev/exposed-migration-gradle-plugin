@@ -1,6 +1,7 @@
 package org.jetbrains.exposed.migration.plugin
 
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.internal.jdbc.DriverDataSource
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -27,12 +28,10 @@ import org.testcontainers.containers.MariaDBContainer
 import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.containers.OracleContainer
 import org.testcontainers.containers.wait.strategy.Wait
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 import java.io.File.separator
 import java.net.URLClassLoader
 import java.util.regex.Pattern
-import kotlin.math.log
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
@@ -125,7 +124,7 @@ abstract class GenerateMigrationsTask : DefaultTask() {
 
     fun findHighestVersion(migrationsDirectory: File): (Int) -> String {
         var highestMajor = 0
-        var hasXYFormat = false
+        var hasXYFormat = true
 
         migrationsDirectory.listFiles().forEach { file ->
             val fileName = file.name
@@ -133,7 +132,6 @@ abstract class GenerateMigrationsTask : DefaultTask() {
             // Check for VX_Y__ format first
             val matcherXY = versionXYPattern.matcher(fileName)
             if (matcherXY.matches()) {
-                hasXYFormat = true
                 val major = matcherXY.group(1).toInt()
 
                 if (major > highestMajor || (major == highestMajor)) {
@@ -143,8 +141,9 @@ abstract class GenerateMigrationsTask : DefaultTask() {
                 // Check for VX__ format
                 val matcher = versionPattern.matcher(fileName)
                 if (matcher.matches()) {
+                    hasXYFormat = false
                     val version = matcher.group(1).toInt()
-                    if (!hasXYFormat && version > highestMajor) {
+                    if (version > highestMajor) {
                         highestMajor = version
                     }
                 }
@@ -160,16 +159,17 @@ abstract class GenerateMigrationsTask : DefaultTask() {
     }
 
     private inline fun <A> withDatabase(block: (Database) -> A): A =
-        if (testContainersImageName.isPresent) container(testContainersImageName.get()).use { container ->
-            withDatabase(container.jdbcUrl, container.username, container.password) { database ->
-                val migrationsDirectory = migrationsDir.get().asFile
-                // TODO: Unable to connect
-                //                Flyway.configure()
-                //                    .dataSource(container.jdbcUrl, container.username, container.password)
-                //                    .locations("filesystem:${migrationsDirectory.absolutePath}")
-                //                    .load()
-                //                    .migrate()
-                block(database)
+        if (testContainersImageName.isPresent) {
+            container(testContainersImageName.get()).use { container ->
+                withDatabase(container.jdbcUrl, container.username, container.password) { database ->
+                    val migrationsDirectory = migrationsDir.get().asFile
+                    Flyway.configure()
+                        .dataSource(container.jdbcUrl, container.username, container.password)
+                        .locations("filesystem:${migrationsDirectory.absolutePath}")
+                        .load()
+                        .migrate()
+                    block(database)
+                }
             }
         } else {
             if (!databaseUrl.isPresent || !databaseUser.isPresent || !databasePassword.isPresent) {
@@ -178,25 +178,22 @@ abstract class GenerateMigrationsTask : DefaultTask() {
             withDatabase(databaseUrl.get(), databaseUser.get(), databasePassword.get(), block)
         }
 
-    fun container(imageName: String): JdbcDatabaseContainer<Nothing> =
+    fun container(imageName: String): JdbcDatabaseContainer<*> =
         when {
-            imageName.startsWith("postgres:") -> PostgreSQLContainer<Nothing>(imageName).apply {
-                waitingFor(Wait.forListeningPort())
-                start()
-            }
-            imageName.startsWith("mysql:") -> MySQLContainer<Nothing>(imageName).apply { start() }
-            imageName.startsWith("mariadb:") -> MariaDBContainer<Nothing>(imageName).apply { start() }
+            imageName.startsWith("postgres:") -> PostgreSQLContainer<Nothing>(imageName)
+            imageName.startsWith("mysql:") -> MySQLContainer<Nothing>(imageName)
+            imageName.startsWith("mariadb:") -> MariaDBContainer<Nothing>(imageName)
+            imageName.startsWith("oracle:") || imageName.startsWith("gvenzl/oracle-xe:") -> OracleContainer(imageName)
             imageName.startsWith("mcr.microsoft.com/mssql/server:") || imageName.startsWith("sqlserver:") ->
-                MSSQLServerContainer<Nothing>(imageName).apply { start() }
-
-            imageName.startsWith("oracle:") || imageName.startsWith("gvenzl/oracle-xe:") ->
-                @Suppress("UNCHECKED_CAST")
-                OracleContainer(imageName).apply { start() } as JdbcDatabaseContainer<Nothing>
+                MSSQLServerContainer<Nothing>(imageName)
 
             else -> throw IllegalArgumentException(
                 "Unsupported database container image: $imageName. " +
                         "Supported prefixes are: postgres:, mysql:, mariadb:, sqlserver:, mcr.microsoft.com/mssql/server:, oracle:, gvenzl/oracle-xe:"
             )
+        }.apply {
+            waitingFor(Wait.forListeningPort())
+            start()
         }
 
 

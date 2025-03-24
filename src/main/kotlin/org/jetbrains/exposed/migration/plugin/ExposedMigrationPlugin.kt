@@ -26,9 +26,9 @@ class ExposedMigrationPlugin : Plugin<Project> {
             it.migrationFileExtension.set(extension.migrationFileExtension)
 
             // Database connection properties (optional if TestContainers is used)
-            if (extension.databaseUrl.isPresent) it.databaseUrl.set(extension.databaseUrl)
-            if (extension.databaseUser.isPresent) it.databaseUser.set(extension.databaseUser)
-            if (extension.databasePassword.isPresent) it.databasePassword.set(extension.databasePassword)
+            it.databaseUrl.set(extension.databaseUrl)
+            it.databaseUser.set(extension.databaseUser)
+            it.databasePassword.set(extension.databasePassword)
 
             it.testContainersImageName.set(extension.testContainersImageName)
             it.classpath.setFrom(extension.classpath.toList())

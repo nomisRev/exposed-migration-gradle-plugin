@@ -72,7 +72,7 @@ open class ExposedMigrationExtension @Inject constructor(objects: ObjectFactory)
      * Docker image name for TestContainers.
      * Default: postgres:latest
      */
-    val testContainersImageName: Property<String> = objects.property(String::class.java)
+    val testContainersImageName: Property<String> = objects.property(String::class.java).convention("postgres:latest")
 
     /**
      * Classpath that is scanned for Exposed Tables
